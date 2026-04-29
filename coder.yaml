@@ -1,6 +1,6 @@
 ---
 # Run locally inside your Coder workspace:
-#   ansible-playbook install-dev-tools.yml
+#   ansible-playbook coder.yaml
 #
 # If ansible isn't installed yet:
 #   pip install --user ansible  OR  sudo apt install ansible -y
