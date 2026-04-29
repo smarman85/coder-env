@@ -11,7 +11,7 @@
   become: true
 
   vars:
-    kind_version: "v0.27.0"
+    kind_version: "v0.31.0"
     kind_install_path: /usr/local/bin/kind
     arch_map:
       x86_64: amd64
@@ -78,6 +78,17 @@
         force: false   # skip if already present at same path
 
     # ────────────────────────────────────────────────
+    # kustomize
+    # ────────────────────────────────────────────────
+    
+    - name: Download kind binary
+      get_url:
+        url: "https://kind.sigs.k8s.io/dl/{{ kind_version }}/kind-linux-{{ kind_arch }}"
+        dest: "{{ kind_install_path }}"
+        mode: "0755"
+        force: false   # skip if already present at same path
+
+    # ────────────────────────────────────────────────
     # kubectl (useful companion)
     # ────────────────────────────────────────────────
 
@@ -100,31 +111,93 @@
         dest: /usr/local/bin/kubectl
         mode: "0755"
       when: kubectl_check.rc != 0
-
+ 
+    # ────────────────────────────────────────────────
+    # Helm
+    # ────────────────────────────────────────────────
+ 
+    - name: Check if helm is already installed
+      command: which helm
+      register: helm_check
+      changed_when: false
+      failed_when: false
+ 
+    - name: Download helm installer script
+      get_url:
+        url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+        dest: /tmp/get_helm.sh
+        mode: "0700"
+      when: helm_check.rc != 0
+ 
+    - name: Run helm installer script
+      command: /tmp/get_helm.sh
+      when: helm_check.rc != 0
+ 
+    - name: Remove helm installer script
+      file:
+        path: /tmp/get_helm.sh
+        state: absent
+      when: helm_check.rc != 0
+ 
+    # ────────────────────────────────────────────────
+    # Kustomize
+    # ────────────────────────────────────────────────
+ 
+    - name: Check if kustomize is already installed
+      command: which kustomize
+      register: kustomize_check
+      changed_when: false
+      failed_when: false
+ 
+    - name: Download and run kustomize installer
+      shell: |
+        curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+      args:
+        chdir: /tmp
+      when: kustomize_check.rc != 0
+ 
+    - name: Move kustomize to /usr/local/bin
+      command: mv /tmp/kustomize /usr/local/bin/kustomize
+      when: kustomize_check.rc != 0
+ 
     # ────────────────────────────────────────────────
     # Verify
     # ────────────────────────────────────────────────
-
+ 
     - name: Check podman version
       command: podman --version
       register: podman_ver
       changed_when: false
       become: false
-
+ 
     - name: Check kind version
       command: kind version
       register: kind_ver
       changed_when: false
-
+ 
     - name: Check kubectl version
       command: kubectl version --client --short
       register: kubectl_ver
       changed_when: false
       failed_when: false
-
+ 
+    - name: Check helm version
+      command: helm version --short
+      register: helm_ver
+      changed_when: false
+      failed_when: false
+ 
+    - name: Check kustomize version
+      command: kustomize version
+      register: kustomize_ver
+      changed_when: false
+      failed_when: false
+ 
     - name: Print installed versions
       debug:
         msg:
           - "{{ podman_ver.stdout }}"
           - "{{ kind_ver.stdout }}"
           - "{{ kubectl_ver.stdout }}"
+          - "{{ helm_ver.stdout }}"
+          - "{{ kustomize_ver.stdout }}"
