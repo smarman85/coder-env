@@ -1,0 +1,130 @@
+---
+# Run locally inside your Coder workspace:
+#   ansible-playbook install-dev-tools.yml
+#
+# If ansible isn't installed yet:
+#   pip install --user ansible  OR  sudo apt install ansible -y
+
+- name: Install podman and kind on Coder workspace (Ubuntu)
+  hosts: localhost
+  connection: local
+  become: true
+
+  vars:
+    kind_version: "v0.27.0"
+    kind_install_path: /usr/local/bin/kind
+    arch_map:
+      x86_64: amd64
+      aarch64: arm64
+
+  tasks:
+
+    # ────────────────────────────────────────────────
+    # Podman
+    # ────────────────────────────────────────────────
+
+    - name: Install dependencies
+      apt:
+        name:
+          - curl
+          - ca-certificates
+          - gnupg
+          - uidmap          # required for rootless podman
+          - slirp4netns     # required for rootless networking
+        state: present
+        update_cache: true
+
+    - name: Install podman
+      apt:
+        name: podman
+        state: present
+        update_cache: true
+
+    - name: Ensure containers config dir exists
+      become: false
+      file:
+        path: "~/.config/containers"
+        state: directory
+        mode: "0755"
+
+    - name: Write containers.conf with cgroupfs manager
+      become: false
+      copy:
+        dest: "~/.config/containers/containers.conf"
+        content: |
+          [engine]
+          cgroup_manager = "cgroupfs"
+          events_logger = "file"
+        mode: "0644"
+
+    # ────────────────────────────────────────────────
+    # kind
+    # ────────────────────────────────────────────────
+
+    - name: Detect system architecture
+      command: uname -m
+      register: uname_m
+      changed_when: false
+
+    - name: Set kind download arch
+      set_fact:
+        kind_arch: "{{ arch_map[uname_m.stdout] | default('amd64') }}"
+
+    - name: Download kind binary
+      get_url:
+        url: "https://kind.sigs.k8s.io/dl/{{ kind_version }}/kind-linux-{{ kind_arch }}"
+        dest: "{{ kind_install_path }}"
+        mode: "0755"
+        force: false   # skip if already present at same path
+
+    # ────────────────────────────────────────────────
+    # kubectl (useful companion)
+    # ────────────────────────────────────────────────
+
+    - name: Check if kubectl is already installed
+      command: which kubectl
+      register: kubectl_check
+      changed_when: false
+      failed_when: false
+
+    - name: Get latest kubectl version
+      uri:
+        url: https://dl.k8s.io/release/stable.txt
+        return_content: true
+      register: kubectl_version
+      when: kubectl_check.rc != 0
+
+    - name: Download kubectl
+      get_url:
+        url: "https://dl.k8s.io/release/{{ kubectl_version.content | trim }}/bin/linux/{{ kind_arch }}/kubectl"
+        dest: /usr/local/bin/kubectl
+        mode: "0755"
+      when: kubectl_check.rc != 0
+
+    # ────────────────────────────────────────────────
+    # Verify
+    # ────────────────────────────────────────────────
+
+    - name: Check podman version
+      command: podman --version
+      register: podman_ver
+      changed_when: false
+      become: false
+
+    - name: Check kind version
+      command: kind version
+      register: kind_ver
+      changed_when: false
+
+    - name: Check kubectl version
+      command: kubectl version --client --short
+      register: kubectl_ver
+      changed_when: false
+      failed_when: false
+
+    - name: Print installed versions
+      debug:
+        msg:
+          - "{{ podman_ver.stdout }}"
+          - "{{ kind_ver.stdout }}"
+          - "{{ kubectl_ver.stdout }}"
