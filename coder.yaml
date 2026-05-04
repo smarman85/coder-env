@@ -52,6 +52,9 @@
       copy:
         dest: "~/.config/containers/containers.conf"
         content: |
+          [containers]
+          log_driver = "k8s-file"
+
           [engine]
           cgroup_manager = "cgroupfs"
           events_logger = "file"
@@ -163,26 +166,26 @@
     # ────────────────────────────────────────────────
     # Terraform
     # ────────────────────────────────────────────────
- 
+
     - name: Check if terraform is already installed
       command: which terraform
       register: terraform_check
       changed_when: false
       failed_when: false
- 
+
     - name: Add HashiCorp apt signing key
       apt_key:
         url: https://apt.releases.hashicorp.com/gpg
         state: present
       when: terraform_check.rc != 0
- 
+
     - name: Add HashiCorp apt repository
       apt_repository:
         repo: "deb [arch=amd64] https://apt.releases.hashicorp.com {{ ansible_distribution_release }} main"
         state: present
         filename: hashicorp
       when: terraform_check.rc != 0
- 
+
     - name: Install terraform
       apt:
         name: terraform
