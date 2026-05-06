@@ -61,6 +61,37 @@
         mode: "0644"
 
     # ────────────────────────────────────────────────
+    # k3d
+    # ────────────────────────────────────────────────
+
+    - name: Check if k3d is already installed
+      command: which k3d
+      register: k3d_check
+      changed_when: false
+      failed_when: false
+
+    - name: Download k3d install script
+      get_url:
+        url: https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh
+        dest: /tmp/install_k3d.sh
+        mode: "0755"
+      when: k3d_check.rc != 0
+
+    - name: Run k3d install script
+      command: /tmp/install_k3d.sh
+      when: k3d_check.rc != 0
+      environment:
+        PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+        GITHUB_TOKEN: "{{ lookup('env', 'GITHUB_TOKEN') }}"
+
+    - name: Remove k3d install script
+      file:
+        path: /tmp/install_k3d.sh
+        state: absent
+      when: k3d_check.rc != 0
+
+
+    # ────────────────────────────────────────────────
     # kind
     # ────────────────────────────────────────────────
 
@@ -232,6 +263,12 @@
       changed_when: false
       failed_when: false
 
+    - name: Check k3d version
+      command: k3d version
+      register: k3d_ver
+      changed_when: false
+      failed_when: false
+
     - name: Print installed versions
       debug:
         msg:
@@ -241,3 +278,4 @@
           - "{{ helm_ver.stdout }}"
           - "{{ kustomize_ver.stdout }}"
           - "{{ terraform_ver.stdout_lines[0] }}"
+          - "{{ k3d_ver.stdout_lines[0] }}"
