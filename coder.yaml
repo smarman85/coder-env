@@ -31,12 +31,7 @@
           - gnupg
           - uidmap          # required for rootless podman
           - slirp4netns     # required for rootless networking
-        state: present
-        update_cache: true
-
-    - name: Install podman
-      apt:
-        name: podman
+          - podman
         state: present
         update_cache: true
 
@@ -59,6 +54,40 @@
           cgroup_manager = "cgroupfs"
           events_logger = "file"
         mode: "0644"
+
+    # ────────────────────────────────────────────────
+    # kubelogin
+    # ────────────────────────────────────────────────
+
+    - name: Check if kubelogin is already installed
+      command: which kubelogin
+      register: kubelogin_check
+      changed_when: false
+      failed_when: false
+
+    - name: Download kubelogin zip
+      get_url:
+        url: https://github.com/Azure/kubelogin/releases/latest/download/kubelogin-linux-amd64.zip
+        dest: /tmp/kubelogin-linux-amd64.zip
+        mode: "0644"
+      when: kubelogin_check.rc != 0
+
+    - name: Unzip kubelogin
+      unarchive:
+        src: /tmp/kubelogin-linux-amd64.zip
+        dest: /tmp
+        remote_src: true
+      when: kubelogin_check.rc != 0
+
+    - name: Move kubelogin to /usr/local/bin
+      command: mv /tmp/bin/linux_amd64/kubelogin /usr/local/bin/kubelogin
+      when: kubelogin_check.rc != 0
+
+    - name: Remove kubelogin zip
+      file:
+        path: /tmp/kubelogin-linux-amd64.zip
+        state: absent
+      when: kubelogin_check.rc != 0
 
     # ────────────────────────────────────────────────
     # k3d
@@ -234,6 +263,12 @@
       changed_when: false
       become: false
 
+    - name: Check kubelogin version
+      command: kubelogin --version
+      register: kubelogin_ver
+      changed_when: false
+      failed_when: false
+
     - name: Check kind version
       command: kind version
       register: kind_ver
@@ -273,6 +308,7 @@
       debug:
         msg:
           - "{{ podman_ver.stdout }}"
+          - "{{ kubelogin_ver.stdout }}"
           - "{{ kind_ver.stdout }}"
           - "{{ kubectl_ver.stdout }}"
           - "{{ helm_ver.stdout }}"
