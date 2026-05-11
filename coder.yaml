@@ -56,6 +56,15 @@
           log_level = "error"
         mode: "0644"
 
+    - name: replace unqualified search registries
+      become: true
+      ansible.builtin.lineinfile:
+        path: /etc/containers/registries.conf
+        regexp: '^#?\s*unqualified-search-registries\s*='
+        line: 'unqualified-search-registries = ["docker.io", "quay.io", "ghcr.io"]'
+      tags: registry
+
+
     # ────────────────────────────────────────────────
     # kubelogin
     # ────────────────────────────────────────────────
