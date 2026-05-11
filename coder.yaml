@@ -32,6 +32,7 @@
           - uidmap          # required for rootless podman
           - slirp4netns     # required for rootless networking
           - podman
+          - yq
         state: present
         update_cache: true
 
