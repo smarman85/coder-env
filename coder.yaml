@@ -53,6 +53,7 @@
           [engine]
           cgroup_manager = "cgroupfs"
           events_logger = "file"
+          log_level = "error"
         mode: "0644"
 
     # ────────────────────────────────────────────────
