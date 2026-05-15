@@ -13,6 +13,7 @@
   vars:
     kind_version: "v0.31.0"
     kind_install_path: /usr/local/bin/kind
+    kustomize_version: "v5.4.3"
     arch_map:
       x86_64: amd64
       aarch64: arm64
@@ -151,10 +152,6 @@
         mode: "0755"
         force: false   # skip if already present at same path
 
-    # ────────────────────────────────────────────────
-    # kustomize
-    # ────────────────────────────────────────────────
-
     - name: Download kind binary
       get_url:
         url: "https://kind.sigs.k8s.io/dl/{{ kind_version }}/kind-linux-{{ kind_arch }}"
@@ -223,15 +220,15 @@
       changed_when: false
       failed_when: false
 
-    - name: Download and run kustomize installer
+    - name: Install kustomize
       shell: |
-        curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+        curl -sLO "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
+        tar xzvf kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz
+        chmod +x kustomize
+        mv kustomize /usr/local/bin/kustomize
+        rm -f kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz
       args:
         chdir: /tmp
-      when: kustomize_check.rc != 0
-
-    - name: Move kustomize to /usr/local/bin
-      command: mv /tmp/kustomize /usr/local/bin/kustomize
       when: kustomize_check.rc != 0
 
     # ────────────────────────────────────────────────
