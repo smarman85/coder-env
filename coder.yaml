@@ -222,11 +222,11 @@
 
     - name: Install kustomize
       shell: |
-        curl -sLO "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
-        tar xzvf kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz
+        curl -sLO "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F{{ kustomize_version }}/kustomize_{{ kustomize_version }}_linux_amd64.tar.gz"
+        tar xzvf kustomize_{{ kustomize_version }}_linux_amd64.tar.gz
         chmod +x kustomize
         mv kustomize /usr/local/bin/kustomize
-        rm -f kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz
+        rm -f kustomize_{{ kustomize_version }}_linux_amd64.tar.gz
       args:
         chdir: /tmp
       when: kustomize_check.rc != 0
