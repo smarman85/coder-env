@@ -34,6 +34,7 @@
           - slirp4netns     # required for rootless networking
           - podman
           - yq
+          - graphviz
         state: present
         update_cache: true
 
